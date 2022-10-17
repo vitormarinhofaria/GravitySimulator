@@ -56,13 +56,13 @@ int main(int argc, char** argv)
 	Transform quadTransform{ .position = {0.0f, 0.0f, 0.0f}, .rotation = {0.0f, 0.0f, 0.0f}, .scale = {1.0f, 1.0f, 1.0f} };
 
 	float aspect = WINDOW_WIDTH / WINDOW_HEIGHT;
-	float windowScale = 0.01f;
+	float windowScale = 0.1f;
 	dxm::Vector3 cameraPosition = { 0.0f, 0.0f, -10.0f };
 	dxm::Matrix projection = dxm::Matrix::CreateOrthographic(WINDOW_WIDTH * windowScale, WINDOW_HEIGHT * windowScale, 0.01, 1000.0f);
 	//dxm::Matrix view = dxm::Matrix::CreateLookAt(cameraPosition, cameraPosition * dxm::Vector3{ 0.0f, 0.0f, -1.0f }, { 0.0f, -1.0f, 0.0f });
 
-	dxm::Vector3 quadMovment{ 0.0f, 0.0f, 0.0f };
-	float quadMass = 1.0f;
+	dxm::Vector3 quadMovment{ 20.0f, 8.0f, 0.0f };
+	float quadMass = 100.0f;
 	dxm::Vector3 clearColor{ 0.2f, 0.2f, 0.2f };
 	myQuad.SetMatrix(renderer, quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection);
 	auto frameCount = 0;
@@ -128,6 +128,7 @@ int main(int argc, char** argv)
 		}
 
 		{
+			static int particleCount = INSTANCE_COUNT_DEF;
 			ImGui_ImplDX11_NewFrame();
 			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
@@ -138,15 +139,9 @@ int main(int argc, char** argv)
 			ImGui::SliderFloat("Sun Speed", &quadSpeed, 0.001f, 5.0f);
 			ImGui::SliderFloat("Zoom Level", &windowScale, 0.01f, 0.10f);
 			if (ImGui::Button("Reset Positions") || keyStates[SDLK_SPACE] == SDL_KEYDOWN) {
-				for (auto i = 0; i < myQuad2.instanceData.size(); i++) {
-					auto& q = myQuad2.instanceData[i];
-					float factor = 8.0f;
-					auto qpv = dxm::Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f };;
-					q.position[0] = qpv.x;
-					q.position[1] = qpv.y;
-				}
+				myQuad2 = Quad2D(renderer, (uint32_t)particleCount);
 			}
-			static int particleCount = INSTANCE_COUNT_DEF;
+			
 			if (ImGui::InputInt("Set Particle Count", &particleCount)) {
 				if (particleCount > 0) {
 					myQuad2 = Quad2D(renderer, uint32_t(particleCount));
