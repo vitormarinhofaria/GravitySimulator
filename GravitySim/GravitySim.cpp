@@ -184,6 +184,7 @@ int main(int argc, char** argv)
 				auto direction = d * (Force / q.mass);
 				auto dir1 = dxm::Vector3(q.direction[0], q.direction[1], q.direction[2]);
 				dir1 += direction;
+				
 				q.direction[0] = dir1.x;
 				q.direction[1] = dir1.y;
 
@@ -192,6 +193,7 @@ int main(int argc, char** argv)
 					auto direction2 = d2 * (Force / q2.mass);
 					auto dir2 = dxm::Vector3(q2.direction[0], q2.direction[1], q2.direction[2]);
 					dir2 += direction2;
+					
 					q2.direction[0] = dir2.x;
 					q2.direction[1] = dir2.y;
 					q2.speed = dir2.Length();
@@ -207,13 +209,6 @@ int main(int argc, char** argv)
 			qpv += direction;
 			q.position[0] = qpv.x;
 			q.position[1] = qpv.y;
-
-			if (frameCount == frameLoop && false) {
-				float factor = 5.0f;
-				qpv = dxm::Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f };;
-				q.position[0] = qpv.x;
-				q.position[1] = qpv.y;
-			}
 
 			q.matrix = dxm::Matrix::Identity;
 			if (i == 0) {
