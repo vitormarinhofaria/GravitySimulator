@@ -14,4 +14,8 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
 
+#include <imgui.h>
+#include <imgui_impl_dx11.h>
+#include <imgui_impl_sdl.h>
+
 #include <directxtk/SimpleMath.h>
