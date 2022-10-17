@@ -69,8 +69,8 @@ int main(int argc, char** argv)
 	constexpr auto frameLoop = 360;
 	bool running = true;
 	bool vsync = false;
-	float cameraSpeed = 0.1f;
-	float quadSpeed = 0.05f;
+	float cameraSpeed = 0.15f;
+	float quadSpeed = 0.2f;
 	while (running) {
 		frameCount++;
 		SDL_Event event{};
@@ -156,6 +156,8 @@ int main(int argc, char** argv)
 				renderer.SetClearColor(clearColor);
 			}
 			ImGui::Checkbox("V-Sync", &vsync);
+
+			ImGui::Text("Controls\nW A S D = Move the camera\nArrow Keys = Move the 'sun'\nSpacebar = Reset particles position\n");
 			ImGui::End();
 		}
 
