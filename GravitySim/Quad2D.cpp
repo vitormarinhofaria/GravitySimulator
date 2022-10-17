@@ -93,8 +93,9 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount) : mInstancesCount(instCou
 		ins.position[0] = position.x;
 		ins.position[1] = position.y;
 		ins.position[2] = position.z;
+		float massFactor = Utils::RandomRange(1.0f, 4.0f);
 		//ins.mass = Utils::RandomRange(100000.0f , 10000000.0f);
-		//ins.mass = 1000000.0f * std::abs(ins.position[0]);
+		ins.mass = 10000.0f * massFactor;
 
 		instanceData.push_back(ins);
 		indices.push_back(i);
