@@ -61,11 +61,17 @@ Renderer::~Renderer()
 
 void Renderer::PrepareRender()
 {
-	FLOAT clearColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	mDContext->ClearRenderTargetView(mBackbuffer, clearColor);
 }
 
-void Renderer::Present()
+void Renderer::Present(bool vsync)
 {
-	mSwapChain->Present(0, 0);
+	mSwapChain->Present(vsync, 0);
+}
+
+void Renderer::SetClearColor(DirectX::SimpleMath::Vector3 color)
+{
+	clearColor[0] = color.x;
+	clearColor[1] = color.y;
+	clearColor[2] = color.z;
 }
