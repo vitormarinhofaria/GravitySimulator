@@ -42,11 +42,14 @@ int main(int argc, char** argv)
 
 	SDL_ShowWindow(window);
 
-	srand(SDL_GetTicks64());
+	ImGui::CreateContext();
+	auto& imGuiIO = ImGui::GetIO();
 
 	Renderer renderer{ native_window, WINDOW_WIDTH, WINDOW_HEIGHT };
+	ImGui_ImplSDL2_InitForD3D(window);
+	ImGui_ImplDX11_Init(renderer.mDevice, renderer.mDContext);
 
-	Quad2D myQuad2 = Quad2D(renderer);
+	Quad2D myQuad2 = Quad2D(renderer, INSTANCE_COUNT_DEF);
 	myQuad2.SetInput(renderer);
 
 	SingleQuad myQuad(renderer);
@@ -59,15 +62,20 @@ int main(int argc, char** argv)
 	//dxm::Matrix view = dxm::Matrix::CreateLookAt(cameraPosition, cameraPosition * dxm::Vector3{ 0.0f, 0.0f, -1.0f }, { 0.0f, -1.0f, 0.0f });
 
 	dxm::Vector3 quadMovment{ 0.0f, 0.0f, 0.0f };
-
+	float quadMass = 1.0f;
+	dxm::Vector3 clearColor{ 0.2f, 0.2f, 0.2f };
 	myQuad.SetMatrix(renderer, quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection);
 	auto frameCount = 0;
 	constexpr auto frameLoop = 360;
 	bool running = true;
+	bool vsync = false;
+	float cameraSpeed = 0.1f;
+	float quadSpeed = 0.05f;
 	while (running) {
 		frameCount++;
 		SDL_Event event{};
 		while (SDL_PollEvent(&event) != 0) {
+			ImGui_ImplSDL2_ProcessEvent(&event);
 			switch (event.type)
 			{
 			case SDL_KEYDOWN: {
@@ -78,7 +86,7 @@ int main(int argc, char** argv)
 				handleKey(event.key.keysym.sym, SDL_KEYUP);
 				break;
 			}
-			
+
 			case SDL_QUIT: {
 				running = false;
 				break;
@@ -88,46 +96,77 @@ int main(int argc, char** argv)
 			}
 
 		}
-		float speedFactor = 0.1f;
 		if (keyStates[SDLK_a] == SDL_KEYDOWN) {
-			cameraPosition.x += speedFactor;
+			cameraPosition.x += cameraSpeed;
 		}
 		if (keyStates[SDLK_d] == SDL_KEYDOWN) {
-			cameraPosition.x -= speedFactor;
+			cameraPosition.x -= cameraSpeed;
 		}
 		if (keyStates[SDLK_w] == SDL_KEYDOWN) {
-			cameraPosition.y -= speedFactor;
+			cameraPosition.y -= cameraSpeed;
 		}
 		if (keyStates[SDLK_s] == SDL_KEYDOWN) {
-			cameraPosition.y += speedFactor;
+			cameraPosition.y += cameraSpeed;
 		}
 		if (keyStates[SDLK_z] == SDL_KEYDOWN) {
-			cameraPosition.z -= speedFactor;
+			cameraPosition.z -= cameraSpeed;
 		}
 		if (keyStates[SDLK_x] == SDL_KEYDOWN) {
-			cameraPosition.z += speedFactor;
+			cameraPosition.z += cameraSpeed;
 		}
 		if (keyStates[SDLK_UP] == SDL_KEYDOWN) {
-			quadMovment.y += speedFactor;
+			quadMovment.y += quadSpeed;
 		}
 		if (keyStates[SDLK_DOWN] == SDL_KEYDOWN) {
-			quadMovment.y -= speedFactor;
+			quadMovment.y -= quadSpeed;
 		}
 		if (keyStates[SDLK_LEFT] == SDL_KEYDOWN) {
-			quadMovment.x -= speedFactor;
+			quadMovment.x -= quadSpeed;
 		}
 		if (keyStates[SDLK_RIGHT] == SDL_KEYDOWN) {
-			quadMovment.x += speedFactor;
+			quadMovment.x += quadSpeed;
+		}
+
+		{
+			ImGui_ImplDX11_NewFrame();
+			ImGui_ImplSDL2_NewFrame();
+			ImGui::NewFrame();
+
+			ImGui::Begin("Controls");
+			ImGui::SliderFloat("Massa", &quadMass, 0.01, 1000.0f);
+			ImGui::SliderFloat("Camera Speed", &cameraSpeed, 0.001f, 5.0f);
+			ImGui::SliderFloat("Sun Speed", &quadSpeed, 0.001f, 5.0f);
+			ImGui::SliderFloat("Zoom Level", &windowScale, 0.01f, 0.10f);
+			if (ImGui::Button("Reset Positions") || keyStates[SDLK_SPACE] == SDL_KEYDOWN) {
+				for (auto i = 0; i < myQuad2.instanceData.size(); i++) {
+					auto& q = myQuad2.instanceData[i];
+					float factor = 8.0f;
+					auto qpv = dxm::Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f };;
+					q.position[0] = qpv.x;
+					q.position[1] = qpv.y;
+				}
+			}
+			static int particleCount = INSTANCE_COUNT_DEF;
+			if (ImGui::InputInt("Set Particle Count", &particleCount)) {
+				if (particleCount > 0) {
+					myQuad2 = Quad2D(renderer, uint32_t(particleCount));
+				}
+			}
+			if (ImGui::ColorPicker3("Background Color", (float*)&clearColor)) {
+				renderer.SetClearColor(clearColor);
+			}
+			ImGui::Checkbox("V-Sync", &vsync);
+			ImGui::End();
 		}
 
 		myQuad.SetMatrix(renderer, (quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection).Transpose());
 		//myQuad.SetMatrix(renderer, dxm::Matrix::Identity * dxm::Matrix::CreateScale(1.0f, 1.0f, 1.0f));
-
+		projection = dxm::Matrix::CreateOrthographic(WINDOW_WIDTH * windowScale, WINDOW_HEIGHT * windowScale, 0.01, 1000.0f);
 		for (auto i = 0; i < myQuad2.instanceData.size(); i++) {
 			auto& q = myQuad2.instanceData[i];
-			float iFactor = 1.0f;
+
 			if (i == 0) {
-				q.mass = 1000000.0f * iFactor;
+				q.mass = 1000000.0f * quadMass;
 				q.position[0] = quadMovment.x;
 				q.position[1] = quadMovment.y;
 				q.position[2] = quadMovment.z;
@@ -138,7 +177,7 @@ int main(int argc, char** argv)
 			auto qpv = dxm::Vector3(myQuad2.instanceData[i].position[0], myQuad2.instanceData[i].position[1], myQuad2.instanceData[i].position[2]);
 			const auto G = 6.6742E-11;
 
-			for (auto y = i + 1; y < myQuad2.instanceData.size(); y += 2) {
+			for (auto y = i + 1; y < myQuad2.instanceData.size(); y += 1) {
 				auto& q2 = myQuad2.instanceData[y];
 				auto q2pv = dxm::Vector3(q2.position[0], q2.position[1], q2.position[2]);
 				auto distance = dxm::Vector3::DistanceSquared(qpv, q2pv);
@@ -181,10 +220,10 @@ int main(int argc, char** argv)
 
 			q.matrix = dxm::Matrix::Identity;
 			if (i == 0) {
-				q.matrix *= dxm::Matrix::CreateScale(1.0f, 1.0f, 1.0f);
+				q.matrix *= dxm::Matrix::CreateScale(0.6f, 0.6f, 0.6f);
 			}
 			else {
-				q.matrix *= dxm::Matrix::CreateScale(0.1f, 0.1f, 1.0f);
+				q.matrix *= dxm::Matrix::CreateScale(0.22f, 0.22f, 1.0f);
 			}
 			q.matrix *= dxm::Matrix::CreateTranslation(qpv);
 			q.matrix *= dxm::Matrix::CreateTranslation(cameraPosition);
@@ -197,6 +236,7 @@ int main(int argc, char** argv)
 			frameCount = 0;
 		}
 		myQuad2.SetInput(renderer);
+
 		renderer.PrepareRender();
 
 		///Draw stuff...
@@ -206,7 +246,10 @@ int main(int argc, char** argv)
 			myQuad2.Draw(renderer);
 		}
 
-		renderer.Present();
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+		renderer.Present(vsync);
 	}
 
 	return 0;
