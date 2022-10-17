@@ -23,7 +23,7 @@ void Quad2D::Draw(Renderer& r)
 	r.mDContext->PSSetShader(pixelShader, nullptr, 0);
 
 	//renderer.mDContext->DrawInstanced
-	r.mDContext->DrawInstanced(6, INSTANCE_COUNT, 0, 0);
+	r.mDContext->DrawInstanced(mVerticesCount, mInstancesCount, 0, 0);
 	//r.mDContext->Draw(3, 0);
 }
 
@@ -36,7 +36,7 @@ void Quad2D::SetInput(Renderer& r)
 	r.mDContext->Unmap(instanceDataBuffer, 0);
 }
 
-Quad2D::Quad2D(Renderer& renderer)
+Quad2D::Quad2D(Renderer& renderer, uint32_t instCount) : mInstancesCount(instCount)
 {
 	std::vector<char> pixelCso = Utils::ReadFile("cso/PixelShader.cso");
 	renderer.mDevice->CreatePixelShader(pixelCso.data(), pixelCso.size(), nullptr, &pixelShader);
@@ -58,7 +58,7 @@ Quad2D::Quad2D(Renderer& renderer)
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA , 1},
 	};
 	renderer.mDevice->CreateInputLayout(ied, ARRAYSIZE(ied), vertexCso.data(), vertexCso.size(), &inputLayout);
-	
+
 	std::vector<uint32_t> indices{};
 	float aspect = 1280 / 720;
 	using namespace DirectX;
@@ -69,16 +69,14 @@ Quad2D::Quad2D(Renderer& renderer)
 	Matrix projection = Matrix::CreateOrthographic(128.0, 72.0, 0.01f, 1000.0f);
 	Matrix view = Matrix::Identity * Matrix::CreateTranslation({ 0.0f, 0.0f, -1.0f });
 
-	mMatrices.resize(INSTANCE_COUNT);
-	mColors.resize(INSTANCE_COUNT);
-	for (auto i = 0; i < INSTANCE_COUNT; i++) {
+	for (auto i = 0; i < mInstancesCount; i++) {
 		SimpleMath::Matrix mat = Matrix::Identity;
-		mat *= Matrix::CreateScale(0.2f, 0.2f, 0.2f);
+		mat *= Matrix::CreateScale(0.4f, 0.4f, 0.4f);
 		float factor = 8.0f;
 		float f2 = -0.5f;
 		//srand(SDL_GetTicks64());
-		
-		Vector3 position = Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f};
+
+		Vector3 position = Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f };
 		//Vector3 position = Vector3{ float((double)rand() / RAND_MAX) +(float)1 , float((double)rand() / RAND_MAX) + 1, 0.0f };
 		mat *= Matrix::CreateTranslation(position);
 		Matrix m = mat * view * projection;
@@ -86,9 +84,9 @@ Quad2D::Quad2D(Renderer& renderer)
 
 		InstanceData ins{};
 		ins.matrix = m.Transpose();
-		ins.color[0] = Utils::RandomRange(0.0f, 1.f);
-		ins.color[1] = Utils::RandomRange(0.0f, 1.f);
-		ins.color[2] = Utils::RandomRange(0.0f, 1.f);
+		ins.color[0] = Utils::RandomRange(0.8f, 1.f);
+		ins.color[1] = Utils::RandomRange(0.6f, 0.9f);
+		ins.color[2] = Utils::RandomRange(0.5f, 0.6f);
 
 		ins.speed = Utils::RandomRange(0.0f, 1.f);
 		//ins.speed = 0.0f;
@@ -100,19 +98,60 @@ Quad2D::Quad2D(Renderer& renderer)
 
 		instanceData.push_back(ins);
 		indices.push_back(i);
-
-		mMatrices[i] = m;
-		mColors[i] = { ins.color[0], ins.color[1], ins.color[2] };
 	}
 
-	float quad[] = {
+	/*float quad[] = {
 	0.5, 0.5, 0.0f,
 	0.5, -0.5, 0.0f,
 	-0.5, -0.5, 0.0f,
 	-0.5, -0.5, 0.0f,
 	-0.5, 0.5, 0.0,
 	0.5, 0.5, 0.0
+	};*/
+	/*float quad[] = {
+		0.0f, 0.5, 0.0f,
+		0.5f, 0.0f, 0.0f,
+		-0.5f, 0.0f, 0.0f,
+		-0.5f, 0.0f, 0.0f,
+		0.5f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f,
+	};*/
+	float point = 0.35f;
+	float quad[] = {
+		0.0f, 0.0f, 0.0f,
+		0.0f, 0.5, 0.0f,//
+		point, point, 0.0f,
+
+		0.0f, 0.0f, 0.0f,
+		point, point, 0.0f,
+		0.5f, 0.0f, 0.0f,//
+
+		0.0f, 0.0f, 0.0f,
+		0.5f, 0.0f, 0.0f,//
+		point, -point, 0.0f,
+
+		0.0f, 0.0f, 0.0f,
+		point, -point, 0.0f,
+		0.0f, -0.5f, 0.0f,//
+
+		0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f,//
+		-point, -point, 0.0f,
+
+		0.0f, 0.0f, 0.0f,
+		-point, -point, 0.0f,
+		-0.5f, 0.0f, 0.0f,//
+
+		0.0f, 0.0f, 0.0f,
+		-0.5f, 0.0f, 0.0f,//
+		-point, point, 0.0f,
+
+		0.0f, 0.0f, 0.0f,
+		-point, point, 0.0f,
+		0.0f, 0.5f, 0.0f,//
 	};
+
+	mVerticesCount = ARRAYSIZE(quad) / 3;
 
 	D3D11_BUFFER_DESC buffer{};
 	buffer.ByteWidth = ARRAYSIZE(quad) * sizeof(float);
@@ -134,7 +173,38 @@ Quad2D::Quad2D(Renderer& renderer)
 
 Quad2D::~Quad2D()
 {
-	pixelShader->Release();
-	vertexShader->Release();
-	vertBuffer->Release();
+	if (vertBuffer) {
+		pixelShader->Release();
+		vertexShader->Release();
+		vertBuffer->Release();
+	}
+}
+
+Quad2D& Quad2D::operator=(Quad2D&& other) noexcept
+{
+	this->inputLayout = other.inputLayout;
+	other.inputLayout = nullptr;
+
+	this->instanceData = other.instanceData;
+
+	this->instanceDataBuffer = other.instanceDataBuffer;
+	other.instanceDataBuffer = nullptr;
+
+	this->instanceIndexBuffer = other.instanceIndexBuffer;
+	other.instanceIndexBuffer = nullptr;
+
+	this->mInstancesCount = other.mInstancesCount;
+
+	this->mVerticesCount = other.mVerticesCount;
+
+	this->pixelShader = other.pixelShader;
+	other.pixelShader = nullptr;
+
+	this->vertexShader = other.vertexShader;
+	other.vertexShader = nullptr;
+
+	this->vertBuffer = other.vertBuffer;
+	other.vertBuffer = nullptr;
+
+	return *this;
 }
