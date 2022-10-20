@@ -7,6 +7,9 @@
 #include <array>
 #include <random>
 #include <unordered_map>
+#include <thread>
+#include <mutex>
+#include <future>
 
 #include <Windows.h>
 #include <d3d11.h>
@@ -19,3 +22,4 @@
 #include <imgui_impl_sdl.h>
 
 #include <directxtk/SimpleMath.h>
+#include <DirectXMath.h>

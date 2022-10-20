@@ -4,10 +4,11 @@
 #include "ConstBuffer.h"
 
 #ifdef NDEBUG
-#define INSTANCE_COUNT_DEF 1200
+#define INSTANCE_COUNT_DEF 5000
 #else
-#define INSTANCE_COUNT_DEF 200
+#define INSTANCE_COUNT_DEF 5000
 #endif
+
 class Quad2D
 {
 	ID3D11Buffer* vertBuffer = nullptr;
@@ -23,7 +24,7 @@ class Quad2D
 public:
 	void Draw(Renderer& renderer);
 	void SetInput(Renderer& r);
-	Quad2D(Renderer& renderer, uint32_t count);
+	Quad2D(Renderer& renderer, uint32_t count, bool randomMass);
 	~Quad2D();	
 	//std::vector<DirectX::SimpleMath::Matrix> mMatrices;
 	//std::vector<DirectX::SimpleMath::Vector3> mColors;

@@ -36,7 +36,7 @@ void Quad2D::SetInput(Renderer& r)
 	r.mDContext->Unmap(instanceDataBuffer, 0);
 }
 
-Quad2D::Quad2D(Renderer& renderer, uint32_t instCount) : mInstancesCount(instCount)
+Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass) : mInstancesCount(instCount)
 {
 	std::vector<char> pixelCso = Utils::ReadFile("cso/PixelShader.cso");
 	renderer.mDevice->CreatePixelShader(pixelCso.data(), pixelCso.size(), nullptr, &pixelShader);
@@ -68,15 +68,21 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount) : mInstancesCount(instCou
 	//Matrix view = Matrix::CreateLookAt({ 0.0, 0.0, -2.0f }, Vector3{ 0.0, 0.0, -2.0f }  + Vector3{ 0.0f, 0.0f, -1.0f }, {0.0f, -1.0f, 0.0f });
 	Matrix projection = Matrix::CreateOrthographic(128.0, 72.0, 0.01f, 1000.0f);
 	Matrix view = Matrix::Identity * Matrix::CreateTranslation({ 0.0f, 0.0f, -1.0f });
-
+	instanceData.reserve(mInstancesCount);
 	for (auto i = 0; i < mInstancesCount; i++) {
 		SimpleMath::Matrix mat = Matrix::Identity;
-		mat *= Matrix::CreateScale(0.4f, 0.4f, 0.4f);
-		float factor = 8.0f;
+		mat *= Matrix::CreateScale(0.5f, 0.5f, 0.5f);
+		float factor = 8.0f;// +(mInstancesCount * 0.001f);
 		float f2 = -0.5f;
 		//srand(SDL_GetTicks64());
 
-		Vector3 position = Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f };
+		Vector3 position;
+		if (i == 0) {
+			position = Vector3(20.0f, 8.0f, 0.0f);
+		}
+		else {
+		position = Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f };
+		}
 		//Vector3 position = Vector3{ float((double)rand() / RAND_MAX) +(float)1 , float((double)rand() / RAND_MAX) + 1, 0.0f };
 		mat *= Matrix::CreateTranslation(position);
 		Matrix m = mat * view * projection;
@@ -84,18 +90,50 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount) : mInstancesCount(instCou
 
 		InstanceData ins{};
 		ins.matrix = m.Transpose();
-		ins.color[0] = Utils::RandomRange(0.8f, 1.f);
-		ins.color[1] = Utils::RandomRange(0.6f, 0.9f);
-		ins.color[2] = Utils::RandomRange(0.5f, 0.6f);
+		if (i % 2 == 0) {
+			ins.color[0] = Utils::RandomRange(0.7f, 1.f);
+			ins.color[1] = Utils::RandomRange(0.25f, 0.4f);
+			ins.color[2] = Utils::RandomRange(0.25f, 0.4f);
+		}
+		else if (i % 3 == 0) {
+			ins.color[0] = Utils::RandomRange(0.25f, 0.4f);
+			ins.color[1] = Utils::RandomRange(0.7f, 1.0f);
+			ins.color[2] = Utils::RandomRange(0.25f, 0.5f);
+		}
+		else {
+			ins.color[0] = Utils::RandomRange(0.25f, 0.4f);
+			ins.color[1] = Utils::RandomRange(0.25f, 0.4f);
+			ins.color[2] = Utils::RandomRange(0.7f, 1.0f);
+		}
 
-		ins.speed = Utils::RandomRange(0.0f, 1.f);
+		/*float directionFactor = 0.5f;
+		ins.direction[0] = Utils::RandomRange(-directionFactor, directionFactor);
+		ins.direction[1] = Utils::RandomRange(-directionFactor, directionFactor);
+		ins.direction[2] = Utils::RandomRange(-directionFactor, directionFactor);*/
+
+		//ins.direction[0] = 0.015f;
+		//ins.direction[1] = 0.15f;
+		//ins.direction[2] = 0.015f;
+
+		//ins.speed = Utils::RandomRange(0.0f, 2.f);
 		//ins.speed = 0.0f;
 		ins.position[0] = position.x;
 		ins.position[1] = position.y;
 		ins.position[2] = position.z;
-		float massFactor = Utils::RandomRange(1.0f, 4.0f);
-		//ins.mass = Utils::RandomRange(100000.0f , 10000000.0f);
-		ins.mass = 10000.0f * massFactor;
+		if (randomMass) {
+			float randomChance = Utils::RandomRange(0.0f, 100.0f);
+				
+			if (randomChance > 90.0f) {
+				float massFactor = Utils::RandomRange(50.0f, 150.0f);
+				//ins.mass = Utils::RandomRange(100000.0f , 10000000.0f);
+				ins.mass = BASE_MASS * massFactor;
+			}
+			else {
+				float massFactor = Utils::RandomRange(12.0f, 20.0f);
+				//ins.mass = Utils::RandomRange(100000.0f , 10000000.0f);
+				ins.mass = BASE_MASS * massFactor;
+			}
+		}
 
 		instanceData.push_back(ins);
 		indices.push_back(i);
