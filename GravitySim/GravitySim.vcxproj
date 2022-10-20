@@ -153,17 +153,14 @@
     <ClCompile Include="Quad2D.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="SingleQuad.cpp" />
-    <ClCompile Include="thread_pool.cpp" />
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConstBuffer.h" />
-    <ClInclude Include="macros.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Quad2D.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="SingleQuad.h" />
-    <ClInclude Include="thread_pool.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
