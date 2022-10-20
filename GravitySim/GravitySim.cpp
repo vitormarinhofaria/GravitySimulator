@@ -194,7 +194,7 @@ int main(int argc, char** argv)
 			ImGui::NewFrame();
 
 			ImGui::Begin("Controls");
-			ImGui::SliderFloat("Massa", &quadMass, 0.01, 10000.0f);
+			ImGui::SliderFloat("Mass", &quadMass, 0.01, 10000.0f);
 			ImGui::SliderFloat("Camera Speed", &cameraSpeed, 0.001f, 5.0f);
 			ImGui::SliderFloat("Sun Speed", &quadSpeed, 0.001f, 5.0f);
 			ImGui::SliderFloat("Zoom Level", &windowScale, 0.001f, 0.50f);
@@ -224,6 +224,7 @@ int main(int argc, char** argv)
 				renderer.SetClearColor(clearColor);
 			}
 			ImGui::Checkbox("V-Sync", &vsync);
+			ImGui::Text("FPS: %.0f # %.2fms", ImGui::GetIO().Framerate, ImGui::GetIO().DeltaTime * 1000.0f);
 
 			ImGui::Text("Controls\n"
 				"W A S D = Move the camera\n"
