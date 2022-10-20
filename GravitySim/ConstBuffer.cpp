@@ -173,7 +173,7 @@ void DispatchComputeShader(Renderer& r, Quad2D& quad, AlignedInt data) {
 	r.mDContext->Unmap(ComputeConstBuffer, 0);
 
 	r.mDContext->CSSetConstantBuffers(0, 1, &ComputeConstBuffer);
-	RunComputeShader(r.mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, data.instanceCount / 100, 1, 1);
+	RunComputeShader(r.mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, floor(data.instanceCount / 256), 1, 1);
 }
 void ComputeShaderEndFrame(Renderer& r, Quad2D& quad) {
 	ID3D11Buffer* outputBuf = CreateAndCopyToDebugBuf(r.mDevice, r.mDContext, ComputeOutputBuffer);

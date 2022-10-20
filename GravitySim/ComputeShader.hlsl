@@ -19,7 +19,7 @@ struct InstanceData {
 StructuredBuffer<InstanceData> bufferInput : register(t0);
 RWStructuredBuffer<InstanceData> bufferOut : register(u0);
 
-[numthreads(100, 1, 1)]
+[numthreads(256, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint id = DTid.x;
