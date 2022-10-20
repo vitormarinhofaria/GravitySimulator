@@ -7,7 +7,6 @@
 #include "ConstBuffer.h"
 #include "SingleQuad.h"
 #include "Utils.h"
-#include "thread_pool.h"
 
 std::unordered_map<int, int> keyStates;
 
@@ -55,8 +54,6 @@ int main(int argc, char** argv)
 
 	SingleQuad myQuad(renderer);
 	Transform quadTransform{ .position = {0.0f, 0.0f, 0.0f}, .rotation = {0.0f, 0.0f, 0.0f}, .scale = {1.0f, 1.0f, 1.0f} };
-
-	cb::ThreadPool tp(std::thread::hardware_concurrency());
 
 	float aspect = WINDOW_WIDTH / WINDOW_HEIGHT;
 	float windowScale = 0.08f;
