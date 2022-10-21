@@ -31,7 +31,9 @@ static ID3D11UnorderedAccessView* ComputeView = nullptr;
 static ID3D11Buffer* ComputeConstBuffer = nullptr;
 class Quad2D;
 class Renderer;
+static int m_ComputeUnitCount = 36;
 
+void SetComputeShaderUnitsCount(int count);
 void PrepareComputeShader(Renderer& renderer, Quad2D& quad);
 void DispatchComputeShader(Renderer& r, Quad2D& quad, AlignedInt data);
 void FreeComputeShader();
