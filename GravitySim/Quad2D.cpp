@@ -36,7 +36,7 @@ void Quad2D::SetInput(Renderer& r)
 	r.mDContext->Unmap(instanceDataBuffer, 0);
 }
 
-Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass) : mInstancesCount(instCount)
+Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass, bool randomDirection, float directionFactor, float spacingFactorX, float spacingFactorY) : mInstancesCount(instCount)
 {
 	std::vector<char> pixelCso = Utils::ReadFile("cso/PixelShader.cso");
 	renderer.mDevice->CreatePixelShader(pixelCso.data(), pixelCso.size(), nullptr, &pixelShader);
@@ -81,7 +81,7 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass) : mInsta
 			position = Vector3(20.0f, 8.0f, 0.0f);
 		}
 		else {
-		position = Vector3{ Utils::RandomRange(-factor, factor) , Utils::RandomRange(-factor, factor), .0f };
+			position = Vector3{ Utils::RandomRange(-spacingFactorX, spacingFactorY) , Utils::RandomRange(-spacingFactorX, spacingFactorY), .0f };
 		}
 		//Vector3 position = Vector3{ float((double)rand() / RAND_MAX) +(float)1 , float((double)rand() / RAND_MAX) + 1, 0.0f };
 		mat *= Matrix::CreateTranslation(position);
@@ -106,10 +106,11 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass) : mInsta
 			ins.color[2] = Utils::RandomRange(0.7f, 1.0f);
 		}
 
-		/*float directionFactor = 0.5f;
-		ins.direction[0] = Utils::RandomRange(-directionFactor, directionFactor);
-		ins.direction[1] = Utils::RandomRange(-directionFactor, directionFactor);
-		ins.direction[2] = Utils::RandomRange(-directionFactor, directionFactor);*/
+		if (randomDirection) {
+			ins.direction[0] = Utils::RandomRange(-directionFactor, directionFactor);
+			ins.direction[1] = Utils::RandomRange(-directionFactor, directionFactor);
+			ins.direction[2] = Utils::RandomRange(-directionFactor, directionFactor);
+		}
 
 		//ins.direction[0] = 0.015f;
 		//ins.direction[1] = 0.15f;
@@ -122,7 +123,7 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass) : mInsta
 		ins.position[2] = position.z;
 		if (randomMass) {
 			float randomChance = Utils::RandomRange(0.0f, 100.0f);
-				
+
 			if (randomChance > 90.0f) {
 				float massFactor = Utils::RandomRange(50.0f, 150.0f);
 				//ins.mass = Utils::RandomRange(100000.0f , 10000000.0f);
