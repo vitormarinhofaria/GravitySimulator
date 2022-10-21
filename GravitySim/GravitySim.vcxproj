@@ -157,6 +157,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConstBuffer.h" />
+    <ClInclude Include="ImGuiStyles.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Quad2D.h" />
     <ClInclude Include="Renderer.h" />
