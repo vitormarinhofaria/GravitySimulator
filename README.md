@@ -3,4 +3,6 @@
 
 Simulates gravity physics with a Compute Shader
 
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/6Qss9nZ8pEU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+https://user-images.githubusercontent.com/13912399/197274857-d03ce181-0be0-4799-b156-857f2e79f685.mp4
+
