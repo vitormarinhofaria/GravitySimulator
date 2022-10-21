@@ -7,6 +7,7 @@
 #include "ConstBuffer.h"
 #include "SingleQuad.h"
 #include "Utils.h"
+#include "ImGuiStyles.h"
 
 std::unordered_map<int, int> keyStates;
 
@@ -33,7 +34,7 @@ int main(int argc, char** argv)
 	if (result != 0)
 		std::cout << "Failed to initialize SDL\n";
 
-	SDL_Window* window = SDL_CreateWindow("GravitySim", 50, 50, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+	SDL_Window* window = SDL_CreateWindow("GravitySim", 50, 50, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
 	SDL_SysWMinfo window_info{};
 	SDL_GetWindowWMInfo(window, &window_info);
@@ -44,6 +45,8 @@ int main(int argc, char** argv)
 
 	ImGui::CreateContext();
 	auto& imGuiIO = ImGui::GetIO();
+	imGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	SetStyle_dougbinks(true, 1.0f);
 
 	Renderer renderer{ native_window, WINDOW_WIDTH, WINDOW_HEIGHT };
 	ImGui_ImplSDL2_InitForD3D(window);
@@ -56,8 +59,8 @@ int main(int argc, char** argv)
 	Transform quadTransform{ .position = {0.0f, 0.0f, 0.0f}, .rotation = {0.0f, 0.0f, 0.0f}, .scale = {1.0f, 1.0f, 1.0f} };
 
 	float aspect = WINDOW_WIDTH / WINDOW_HEIGHT;
-	float windowScale = 0.08f;
-	dxm::Vector3 cameraPosition = { 0.0f, 0.0f, -10.0f };
+	float windowScale = 0.05f;
+	dxm::Vector3 cameraPosition = { -20.0f, -8.0f, -10.0f };
 	dxm::Matrix projection = dxm::Matrix::CreateOrthographic(WINDOW_WIDTH * windowScale, WINDOW_HEIGHT * windowScale, 0.01, 1000.0f);
 	//dxm::Matrix view = dxm::Matrix::CreateLookAt(cameraPosition, cameraPosition * dxm::Vector3{ 0.0f, 0.0f, -1.0f }, { 0.0f, -1.0f, 0.0f });
 
@@ -79,18 +82,26 @@ int main(int argc, char** argv)
 	bool randomMass = false;
 	bool simpleMath = false;
 	bool simulationPaused = false;
+	bool hoveringViewport = false;
 
 	PrepareComputeShader(renderer, myQuad2);
-
 	while (running) {
 		frameCount++;
 		SDL_Event event{};
 		while (SDL_PollEvent(&event) != 0) {
 			ImGui_ImplSDL2_ProcessEvent(&event);
-
-			if (!ImGui::GetIO().WantCaptureMouse) {
+			if (event.type == SDL_WINDOWEVENT) {
+				if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+					int w, h;
+					SDL_GetWindowSize(window, &w, &h);
+					renderer.ResizePresentBuffer(w, h, false);
+				}
+			}
+			
+			if (!ImGui::GetIO().WantCaptureMouse || hoveringViewport) {
 				switch (event.type)
 				{
+
 				case SDL_KEYDOWN: {
 					handleKey(event.key.keysym.sym, SDL_KEYDOWN);
 					break;
@@ -170,7 +181,6 @@ int main(int argc, char** argv)
 			sunPosition.x += quadSpeed;
 		}
 		if (keyStates[SDLK_f] == SDL_KEYDOWN) {
-			//cameraPosition = sunPosition;
 			std::cout << "Camera Position: " << cameraPosition.x << " " << cameraPosition.y << "\n";
 			std::cout << "Sun  Position: " << sunPosition.x << " " << sunPosition.y << "\n";
 			cameraPosition = sunPosition;
@@ -192,19 +202,48 @@ int main(int argc, char** argv)
 			ImGui_ImplDX11_NewFrame();
 			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
+			ImGui::DockSpaceOverViewport();
 
-			ImGui::Begin("Controls");
+			{
+				static ImVec2 prevSize{};
+				ImGui::Begin("Viewport", nullptr);
+
+				ImVec2 vMax = ImGui::GetWindowContentRegionMax();
+				vMax.x += ImGui::GetWindowPos().x;
+				vMax.y += ImGui::GetWindowPos().y - 30;
+
+				if (prevSize.x != vMax.x || prevSize.y != vMax.y) {
+					aspect = vMax.x / vMax.y;
+					prevSize = vMax;
+					renderer.ResizeFramebuffer(vMax.x, vMax.y);
+				}
+
+				ImGui::Image(renderer.mFramebufferTexResource, vMax);
+				hoveringViewport = ImGui::IsItemHovered();
+				ImGui::End();
+			}
+
+			ImGui::Begin("Simulation");
 			ImGui::SliderFloat("Mass", &quadMass, 0.01, 10000.0f);
-			ImGui::SliderFloat("Camera Speed", &cameraSpeed, 0.001f, 5.0f);
-			ImGui::SliderFloat("Sun Speed", &quadSpeed, 0.001f, 5.0f);
-			ImGui::SliderFloat("Zoom Level", &windowScale, 0.001f, 0.50f);
-			ImGui::SliderFloat("Zoom Speed", &scroolSpeed, 0.0005f, 0.1f);
 			ImGui::Checkbox("Lock the sun in place", &staticSun);
 			ImGui::Checkbox("Random particle mass", &randomMass);
+
+			ImGui::Separator();
+			static bool randomStartingDirection = false;
+			static float directionFactor = 0.2f;
+			ImGui::Checkbox("Random starting direction", &randomStartingDirection);
+			ImGui::DragFloat("Random Factor", &directionFactor, 0.01f, 0.01f, 1.0f);
+			ImGui::Separator();
+
+			ImGui::Separator();
+			static ImVec2 spacing(8.0f, 8.0f);
+			ImGui::DragFloat2("Particle Spacing", (float*)&spacing);
+			ImGui::Separator();
+
 			if (ImGui::Button("Reset Positions") || keyStates[SDLK_SPACE] == SDL_KEYDOWN) {
 				FreeComputeShader();
-				myQuad2 = Quad2D(renderer, (uint32_t)particleCount, randomMass);
-				cameraPosition = dxm::Vector3(0.0f, 0.0f, -10.0f);
+				myQuad2 = Quad2D(renderer, (uint32_t)particleCount, randomMass, randomStartingDirection, directionFactor, spacing.x, spacing.y);
+				cameraPosition = dxm::Vector3{ -20.0f, -8.0f, -10.0f };
 				float xLimit = 80.0f;
 				float yLimit = 40.0f;
 				if (sunPosition.x > xLimit || sunPosition.x < -xLimit || sunPosition.y > yLimit || sunPosition.y < -yLimit) {
@@ -216,16 +255,25 @@ int main(int argc, char** argv)
 			if (ImGui::InputInt("Set Particle Count", &particleCount)) {
 				if (particleCount > 0) {
 					FreeComputeShader();
-					myQuad2 = Quad2D(renderer, uint32_t(particleCount), randomMass);
+					myQuad2 = Quad2D(renderer, uint32_t(particleCount), randomMass, randomStartingDirection, directionFactor, spacing.x, spacing.y);
 					PrepareComputeShader(renderer, myQuad2);
 				}
 			}
-			if (ImGui::ColorPicker3("Background Color", (float*)&clearColor)) {
-				renderer.SetClearColor(clearColor);
-			}
-			ImGui::Checkbox("V-Sync", &vsync);
+			ImGui::End();
+
+			///
+			ImGui::Begin("Performance");
 			ImGui::Text("FPS: %.0f # %.2fms", ImGui::GetIO().Framerate, ImGui::GetIO().DeltaTime * 1000.0f);
 
+			static int computeUnits = m_ComputeUnitCount;
+			if (ImGui::DragInt("Compute Units", &computeUnits, 1.0f, 0, 1000)) {
+				SetComputeShaderUnitsCount(computeUnits);
+			};
+			ImGui::Checkbox("V-Sync", &vsync);
+			ImGui::End();
+			///
+
+			ImGui::Begin("Controls");
 			ImGui::Text("Controls\n"
 				"W A S D = Move the camera\n"
 				"Arrow Keys = Move the 'sun'\n"
@@ -234,12 +282,23 @@ int main(int argc, char** argv)
 				"Mouse Wheel = Change zoom level\n"
 				"Left Click + Drag = Move the camera\n"
 				"P = Play/Pause the simulation\n");
+			ImGui::Separator();
+			ImGui::SliderFloat("Camera Speed", &cameraSpeed, 0.001f, 5.0f);
+			ImGui::SliderFloat("Sun Speed", &quadSpeed, 0.001f, 5.0f);
+			ImGui::SliderFloat("Zoom Level", &windowScale, 0.001f, 0.50f);
+			ImGui::SliderFloat("Zoom Speed", &scroolSpeed, 0.0005f, 0.1f);
+
+			if (ImGui::ColorPicker3("Background Color", (float*)&clearColor)) {
+				renderer.SetClearColor(clearColor);
+			}
+
+
 			ImGui::End();
 		}
 
 		myQuad.SetMatrix(renderer, (quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection).Transpose());
 		//myQuad.SetMatrix(renderer, dxm::Matrix::Identity * dxm::Matrix::CreateScale(1.0f, 1.0f, 1.0f));
-		projection = dxm::Matrix::CreateOrthographic(WINDOW_WIDTH * windowScale, WINDOW_HEIGHT * windowScale, 0.01, 1000.0f);
+		projection = dxm::Matrix::CreateOrthographic(renderer.mWidth * windowScale, renderer.mHeight * windowScale, 0.01, 1000.0f);
 		//projection.Transpose();
 		AlignedInt data{
 				.instanceCount = (float)myQuad2.instanceData.size(),
@@ -337,7 +396,7 @@ int main(int argc, char** argv)
 		//	q.matrix = q.matrix.Transpose();
 			//q.speed = Utils::RandNormalized();
 		//}
-		
+
 		auto i = 0;
 		for (auto& q : myQuad2.instanceData) {
 			auto qpv = dxm::Vector3(q.position[0], q.position[1], q.position[2]);
@@ -354,10 +413,10 @@ int main(int argc, char** argv)
 			else {
 				float scale;
 				if (q.mass > BASE_MASS * 20.0f) {
-					scale = q.mass * 0.0000006f;
+					scale = q.mass * 0.0000008f;
 				}
 				else {
-					scale = q.mass * 0.000002f;
+					scale = q.mass * 0.000004f;
 				}
 				q.matrix *= dxm::Matrix::CreateScale(scale, scale, 1.0f);
 			}
@@ -382,9 +441,7 @@ int main(int argc, char** argv)
 			myQuad2.Draw(renderer);
 		}
 
-		ImGui::Render();
-		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
+		//ImGui is rendered by the Renderer.Present method;
 		renderer.Present(vsync);
 	}
 
