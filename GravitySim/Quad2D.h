@@ -24,7 +24,7 @@ class Quad2D
 public:
 	void Draw(Renderer& renderer);
 	void SetInput(Renderer& r);
-	Quad2D(Renderer& renderer, uint32_t count, bool randomMass);
+	Quad2D(Renderer& renderer, uint32_t count, bool randomMass = false, bool randomDirection = false, float directionFactor = 0.2f, float spacingFactorX = 8.0f, float spacingFactorY = 8.0f);
 	~Quad2D();	
 	//std::vector<DirectX::SimpleMath::Matrix> mMatrices;
 	//std::vector<DirectX::SimpleMath::Vector3> mColors;
