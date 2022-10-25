@@ -3,6 +3,7 @@
 
 namespace Utils {
 	std::vector<char> ReadFile(std::filesystem::path fileName) {
+#ifdef USE_FS
 		std::vector<char> vec;
 		std::ifstream inputFile = std::ifstream(fileName, std::ios::binary);
 
@@ -13,6 +14,7 @@ namespace Utils {
 		}
 
 		return vec;
+#endif
 	}
 
 
