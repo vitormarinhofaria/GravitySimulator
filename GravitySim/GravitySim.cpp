@@ -2,12 +2,14 @@
 //
 
 #include "pch.h"
+
 #include "Renderer.h"
 #include "Quad2D.h"
 #include "ConstBuffer.h"
 #include "SingleQuad.h"
 #include "Utils.h"
 #include "ImGuiStyles.h"
+#include "Shaders.h"
 
 std::unordered_map<int, int> keyStates;
 
@@ -30,10 +32,11 @@ int WINDOW_HEIGHT = 900;
 
 int main(int argc, char** argv)
 {
-	auto result = SDL_Init(SDL_INIT_EVERYTHING);
-	if (result != 0)
-		std::cout << "Failed to initialize SDL\n";
-
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+		std::cout << "Error : " << SDL_GetError() << std::endl;
+		return -1;
+	}
 	SDL_Window* window = SDL_CreateWindow("GravitySim", 50, 50, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
 	SDL_SysWMinfo window_info{};
@@ -47,15 +50,29 @@ int main(int argc, char** argv)
 	auto& imGuiIO = ImGui::GetIO();
 	imGuiIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	SetStyle_dougbinks(true, 1.0f);
+	std::unordered_map<int, ImFont*> fonts;
 
-	Renderer renderer{ native_window, WINDOW_WIDTH, WINDOW_HEIGHT };
+	ImFontConfig config;
+	config.OversampleV = 2;
+	config.OversampleH = 2;
+	//imGuiIO.Fonts->AddFontDefault(&config);
+	
+	for (auto i = 8; i <= 42; i ++) {
+		fonts[i] = imGuiIO.Fonts->AddFontFromFileTTF("fonts/RobotoCondensed-Regular.ttf", i, &config);
+		//config.MergeMode = true;
+	}
+		
+
+	Renderer::InitGlobal(native_window, WINDOW_WIDTH, WINDOW_HEIGHT);
+	Renderer* renderer = Renderer::Get();
 	ImGui_ImplSDL2_InitForD3D(window);
-	ImGui_ImplDX11_Init(renderer.mDevice, renderer.mDContext);
+	ImGui_ImplDX11_Init(Renderer::Get()->mDevice, Renderer::Get()->mDContext);
+	//auto* font = imGuiIO.Fonts->AddFontFromFileTTF("fonts/RobotoCondensed-Regular.ttf", 18, &config);
 
-	Quad2D myQuad2 = Quad2D(renderer, INSTANCE_COUNT_DEF, false);
-	myQuad2.SetInput(renderer);
+	Quad2D myQuad2 = Quad2D(INSTANCE_COUNT_DEF, false);
+	myQuad2.SetInput();
 
-	SingleQuad myQuad(renderer);
+	SingleQuad myQuad;
 	Transform quadTransform{ .position = {0.0f, 0.0f, 0.0f}, .rotation = {0.0f, 0.0f, 0.0f}, .scale = {1.0f, 1.0f, 1.0f} };
 
 	float aspect = WINDOW_WIDTH / WINDOW_HEIGHT;
@@ -67,8 +84,8 @@ int main(int argc, char** argv)
 	dxm::Vector3 sunPosition{ 20.0f, 8.0f, 0.0f };
 	float quadMass = 1350.0f;
 	dxm::Vector3 clearColor{ 0.02f, 0.02f, 0.02f };
-	renderer.SetClearColor(clearColor);
-	myQuad.SetMatrix(renderer, quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection);
+	Renderer::Get()->SetClearColor(clearColor);
+	myQuad.SetMatrix(quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection);
 	auto frameCount = 0;
 	constexpr auto frameLoop = 360;
 	bool running = true;
@@ -84,7 +101,12 @@ int main(int argc, char** argv)
 	bool simulationPaused = false;
 	bool hoveringViewport = false;
 
-	PrepareComputeShader(renderer, myQuad2);
+	{
+		auto computeShader = ShaderManager::Load("ComputeShader.hlsl", ShaderType::Compute);
+		SetComputeShader(computeShader.ToOwned());
+	}
+
+	PrepareComputeShader(myQuad2);
 	while (running) {
 		frameCount++;
 		SDL_Event event{};
@@ -94,10 +116,10 @@ int main(int argc, char** argv)
 				if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
 					int w, h;
 					SDL_GetWindowSize(window, &w, &h);
-					renderer.ResizePresentBuffer(w, h, false);
+					renderer->ResizePresentBuffer(w, h, false);
 				}
 			}
-			
+
 			if (!ImGui::GetIO().WantCaptureMouse || hoveringViewport) {
 				switch (event.type)
 				{
@@ -195,19 +217,29 @@ int main(int argc, char** argv)
 				timeDelay = defaultDelay;
 			}
 		}
+		static int prevFontSize = 18;
+		static int fontSize = 18;
+		static bool shouldChangeFont = false;
 
 		static bool staticSun = true;
 		{
 			static int particleCount = INSTANCE_COUNT_DEF;
+
+			
+			
 			ImGui_ImplDX11_NewFrame();
 			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
+			ImGui::PushFont(fonts[fontSize]);
 			ImGui::DockSpaceOverViewport();
+			if (shouldChangeFont) {
+				//imGuiIO.Fonts->AddFontFromFileTTF("fonts/RobotoCondensed-Regular.ttf", fontSize);
+				shouldChangeFont = false;
+			}
 
 			{
 				static ImVec2 prevSize{};
 				ImGui::Begin("Viewport", nullptr);
-
 				ImVec2 vMax = ImGui::GetWindowContentRegionMax();
 				vMax.x += ImGui::GetWindowPos().x;
 				vMax.y += ImGui::GetWindowPos().y - 30;
@@ -215,10 +247,10 @@ int main(int argc, char** argv)
 				if (prevSize.x != vMax.x || prevSize.y != vMax.y) {
 					aspect = vMax.x / vMax.y;
 					prevSize = vMax;
-					renderer.ResizeFramebuffer(vMax.x, vMax.y);
+					renderer->ResizeFramebuffer(vMax.x, vMax.y);
 				}
 
-				ImGui::Image(renderer.mFramebufferTexResource, vMax);
+				ImGui::Image(renderer->mFramebufferTexResource, vMax);
 				hoveringViewport = ImGui::IsItemHovered();
 				ImGui::End();
 			}
@@ -242,21 +274,21 @@ int main(int argc, char** argv)
 
 			if (ImGui::Button("Reset Positions") || keyStates[SDLK_SPACE] == SDL_KEYDOWN) {
 				FreeComputeShader();
-				myQuad2 = Quad2D(renderer, (uint32_t)particleCount, randomMass, randomStartingDirection, directionFactor, spacing.x, spacing.y);
+				myQuad2 = Quad2D((uint32_t)particleCount, randomMass, randomStartingDirection, directionFactor, spacing.x, spacing.y);
 				cameraPosition = dxm::Vector3{ -20.0f, -8.0f, -10.0f };
 				float xLimit = 80.0f;
 				float yLimit = 40.0f;
 				if (sunPosition.x > xLimit || sunPosition.x < -xLimit || sunPosition.y > yLimit || sunPosition.y < -yLimit) {
 					sunPosition = dxm::Vector3{ 20.0f, 8.0f, 0.0f };
 				}
-				PrepareComputeShader(renderer, myQuad2);
+				PrepareComputeShader(myQuad2);
 			}
 
 			if (ImGui::InputInt("Set Particle Count", &particleCount)) {
 				if (particleCount > 0) {
 					FreeComputeShader();
-					myQuad2 = Quad2D(renderer, uint32_t(particleCount), randomMass, randomStartingDirection, directionFactor, spacing.x, spacing.y);
-					PrepareComputeShader(renderer, myQuad2);
+					myQuad2 = Quad2D(uint32_t(particleCount), randomMass, randomStartingDirection, directionFactor, spacing.x, spacing.y);
+					PrepareComputeShader(myQuad2);
 				}
 			}
 			ImGui::End();
@@ -264,12 +296,16 @@ int main(int argc, char** argv)
 			///
 			ImGui::Begin("Performance");
 			ImGui::Text("FPS: %.0f # %.2fms", ImGui::GetIO().Framerate, ImGui::GetIO().DeltaTime * 1000.0f);
-
+			ImGui::Checkbox("V-Sync", &vsync);
+			ImGui::Separator();
 			static int computeUnits = m_ComputeUnitCount;
 			if (ImGui::DragInt("Compute Units", &computeUnits, 1.0f, 0, 1000)) {
 				SetComputeShaderUnitsCount(computeUnits);
 			};
-			ImGui::Checkbox("V-Sync", &vsync);
+			if (ImGui::Button("Reload Compute Shader")) {
+				auto shader = ShaderManager::Load("ComputeShader.hlsl", ShaderType::Compute);
+				SetComputeShader(shader.ToOwned());
+			}
 			ImGui::End();
 			///
 
@@ -289,16 +325,22 @@ int main(int argc, char** argv)
 			ImGui::SliderFloat("Zoom Speed", &scroolSpeed, 0.0005f, 0.1f);
 
 			if (ImGui::ColorPicker3("Background Color", (float*)&clearColor)) {
-				renderer.SetClearColor(clearColor);
+				renderer->SetClearColor(clearColor);
 			}
 
+			ImGui::End();
 
+			ImGui::Begin("Interface");
+			if (ImGui::DragInt("Font size", &fontSize, 2.0f, 8, 42)) {
+				shouldChangeFont = true;
+			};
+			//ImGui::PopFont();
 			ImGui::End();
 		}
 
-		myQuad.SetMatrix(renderer, (quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection).Transpose());
+		myQuad.SetMatrix((quadTransform.GetMatrix() * dxm::Matrix::CreateTranslation(cameraPosition) * projection).Transpose());
 		//myQuad.SetMatrix(renderer, dxm::Matrix::Identity * dxm::Matrix::CreateScale(1.0f, 1.0f, 1.0f));
-		projection = dxm::Matrix::CreateOrthographic(renderer.mWidth * windowScale, renderer.mHeight * windowScale, 0.01, 1000.0f);
+		projection = dxm::Matrix::CreateOrthographic(renderer->mWidth * windowScale, renderer->mHeight * windowScale, 0.01, 1000.0f);
 		//projection.Transpose();
 		AlignedInt data{
 				.instanceCount = (float)myQuad2.instanceData.size(),
@@ -310,9 +352,9 @@ int main(int argc, char** argv)
 		myQuad2.instanceData[0].position[1] = sunPosition.y;
 		myQuad2.instanceData[0].position[2] = sunPosition.z;
 		if (!simulationPaused) {
-			UpdateShaderInput(renderer, myQuad2);
-			DispatchComputeShader(renderer, myQuad2, data);
-			ComputeShaderEndFrame(renderer, myQuad2);
+			UpdateShaderInput(myQuad2);
+			DispatchComputeShader(myQuad2, data);
+			ComputeShaderEndFrame(myQuad2);
 		}
 		/// Old calculation on the CPU; now its done on a Compute Shader
 		//for (auto i = 0; i < myQuad2.instanceData.size(); i++) {
@@ -431,18 +473,19 @@ int main(int argc, char** argv)
 		if (frameCount > frameLoop) {
 			frameCount = 0;
 		}
-		myQuad2.SetInput(renderer);
-		renderer.PrepareRender();
+		myQuad2.SetInput();
+		renderer->PrepareRender();
 
 		///Draw stuff...
 		{
 			//renderer.mDContext->VSSetConstantBuffers(0, 1, &instanceBuffer);
 			//myQuad.Draw(renderer);
-			myQuad2.Draw(renderer);
+			myQuad2.Draw();
 		}
-
+		ImGui::PopFont();
 		//ImGui is rendered by the Renderer.Present method;
-		renderer.Present(vsync);
+		renderer->Present(vsync);
+		
 	}
 
 	return 0;
