@@ -34,8 +34,9 @@ class Renderer;
 static int m_ComputeUnitCount = 36;
 
 void SetComputeShaderUnitsCount(int count);
-void PrepareComputeShader(Renderer& renderer, Quad2D& quad);
-void DispatchComputeShader(Renderer& r, Quad2D& quad, AlignedInt data);
+void SetComputeShader(void* shader);
+void PrepareComputeShader(Quad2D& quad);
+void DispatchComputeShader(Quad2D& quad, AlignedInt data);
 void FreeComputeShader();
-void UpdateShaderInput(Renderer& r, Quad2D& quad);
-void ComputeShaderEndFrame(Renderer& r, Quad2D& quad);
+void UpdateShaderInput(Quad2D& quad);
+void ComputeShaderEndFrame(Quad2D& quad);

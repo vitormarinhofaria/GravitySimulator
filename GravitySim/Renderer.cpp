@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Renderer.h"
 
+static Renderer* renderer;
+
 Renderer::Renderer(HWND windowInstance, int w, int h) : mWidth(w), mHeight(h)
 {
 	DXGI_SWAP_CHAIN_DESC scd{};
@@ -15,12 +17,18 @@ Renderer::Renderer(HWND windowInstance, int w, int h) : mWidth(w), mHeight(h)
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
 	
+	int creationFlags = 0;
+#ifndef NDEBUG
+	creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+
 	D3D_FEATURE_LEVEL fLevels[] = { D3D_FEATURE_LEVEL_11_0 };
-	auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_DEBUG, fLevels, ARRAYSIZE(fLevels), D3D11_SDK_VERSION, &scd, &mSwapChain, &mDevice, nullptr, &mDContext);
+	auto result = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, creationFlags, fLevels, ARRAYSIZE(fLevels), D3D11_SDK_VERSION, &scd, &mSwapChain, &mDevice, nullptr, &mDContext);
 	if (FAILED(result)) {
 		std::cout << "Failed to create Device and Swapchain\n";
 	}
 
+#ifndef NDEBUG
 	ID3D11Debug* debug = nullptr;
 	mDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&debug);
 	if (debug)
@@ -34,7 +42,7 @@ Renderer::Renderer(HWND windowInstance, int w, int h) : mWidth(w), mHeight(h)
 		}
 		debug->Release();
 	}
-
+#endif
 	{
 		D3D11_TEXTURE2D_DESC fbDesc{};
 		fbDesc.Height = h;
@@ -113,6 +121,16 @@ Renderer::~Renderer()
 	mSwapChain->Release();
 	mDevice->Release();
 	mDContext->Release();
+}
+
+void Renderer::InitGlobal(HWND window, int w, int h)
+{
+	renderer = new Renderer(window, w, h);
+}
+
+Renderer* Renderer::Get()
+{
+	return renderer;
 }
 
 void Renderer::PrepareRender()

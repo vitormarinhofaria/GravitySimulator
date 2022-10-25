@@ -17,9 +17,9 @@ class SingleQuad
 	ID3D11Buffer* dataBuffer = nullptr;
 	DataBuffer data{};
 public:
-	SingleQuad(Renderer& r);
+	SingleQuad();
 	~SingleQuad();
-	void Draw(Renderer& r);
-	void SetMatrix(Renderer& r, dxm::Matrix mat);
+	void Draw();
+	void SetMatrix(dxm::Matrix mat);
 };
 

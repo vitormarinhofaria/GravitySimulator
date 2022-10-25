@@ -4,8 +4,8 @@
 class Renderer
 {
 public:
-	Renderer(HWND windowInstance, int w, int h);
-	~Renderer();
+	static void InitGlobal(HWND window, int w, int h);
+	static Renderer* Get();
 
 	void PrepareRender();
 	void Present(bool vsync);
@@ -30,6 +30,8 @@ public:
 	ID3D11RasterizerState* mRasterizerState = nullptr;;
 private:
 	FLOAT clearColor[4] = {0.3f, 0.3f, 0.3f, 1.0f};
+	Renderer(HWND windowInstance, int w, int h);
+	~Renderer();
 public:
 	HWND window;
 	int mWidth, mHeight;

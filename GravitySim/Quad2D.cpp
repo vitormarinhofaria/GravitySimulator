@@ -3,46 +3,50 @@
 #include "Utils.h"
 
 
-void Quad2D::Draw(Renderer& r)
+void Quad2D::Draw()
 {
+	auto r = Renderer::Get();
 
-	r.mDContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	r.mDContext->IASetInputLayout(inputLayout);
+	r->mDContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	r->mDContext->IASetInputLayout(inputLayout);
 
 	const uint32_t stride = 3 * sizeof(float);
 	const uint32_t offset = 0;
-	r.mDContext->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
+	r->mDContext->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
 	const uint32_t instStride = sizeof(uint32_t);
 	const uint32_t instOffset = 0;
-	r.mDContext->IASetVertexBuffers(1, 1, &instanceIndexBuffer, &instStride, &instOffset);
+	r->mDContext->IASetVertexBuffers(1, 1, &instanceIndexBuffer, &instStride, &instOffset);
 	const uint32_t dataStride = sizeof(InstanceData);
 	const uint32_t dataOffset = 0;
-	r.mDContext->IASetVertexBuffers(2, 1, &instanceDataBuffer, &dataStride, &dataOffset);
+	r->mDContext->IASetVertexBuffers(2, 1, &instanceDataBuffer, &dataStride, &dataOffset);
 
-	r.mDContext->VSSetShader(vertexShader, nullptr, 0);
-	r.mDContext->PSSetShader(pixelShader, nullptr, 0);
+	r->mDContext->VSSetShader(vertexShader, nullptr, 0);
+	r->mDContext->PSSetShader(pixelShader, nullptr, 0);
 
 	//renderer.mDContext->DrawInstanced
-	r.mDContext->DrawInstanced(mVerticesCount, mInstancesCount, 0, 0);
+	r->mDContext->DrawInstanced(mVerticesCount, mInstancesCount, 0, 0);
 	//r.mDContext->Draw(3, 0);
 }
 
-void Quad2D::SetInput(Renderer& r)
+void Quad2D::SetInput()
 {
+	auto r = Renderer::Get();
+
 	D3D11_MAPPED_SUBRESOURCE res{};
 
-	r.mDContext->Map(instanceDataBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
+	r->mDContext->Map(instanceDataBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
 	std::memcpy(res.pData, instanceData.data(), instanceData.size() * sizeof(InstanceData));
-	r.mDContext->Unmap(instanceDataBuffer, 0);
+	r->mDContext->Unmap(instanceDataBuffer, 0);
 }
 
-Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass, bool randomDirection, float directionFactor, float spacingFactorX, float spacingFactorY) : mInstancesCount(instCount)
+Quad2D::Quad2D(uint32_t instCount, bool randomMass, bool randomDirection, float directionFactor, float spacingFactorX, float spacingFactorY) : mInstancesCount(instCount)
 {
+	auto renderer = Renderer::Get();
 	std::vector<char> pixelCso = Utils::ReadFile("cso/PixelShader.cso");
-	renderer.mDevice->CreatePixelShader(pixelCso.data(), pixelCso.size(), nullptr, &pixelShader);
+	renderer->mDevice->CreatePixelShader(pixelCso.data(), pixelCso.size(), nullptr, &pixelShader);
 
 	auto vertexCso = Utils::ReadFile("cso/VertexShader.cso");
-	renderer.mDevice->CreateVertexShader(vertexCso.data(), vertexCso.size(), nullptr, &vertexShader);
+	renderer->mDevice->CreateVertexShader(vertexCso.data(), vertexCso.size(), nullptr, &vertexShader);
 
 	D3D11_INPUT_ELEMENT_DESC ied[] = {
 		{"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -57,7 +61,7 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass, bool ran
 		{"MASS", 0, DXGI_FORMAT_R32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA , 1},
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA , 1},
 	};
-	renderer.mDevice->CreateInputLayout(ied, ARRAYSIZE(ied), vertexCso.data(), vertexCso.size(), &inputLayout);
+	renderer->mDevice->CreateInputLayout(ied, ARRAYSIZE(ied), vertexCso.data(), vertexCso.size(), &inputLayout);
 
 	std::vector<uint32_t> indices{};
 	float aspect = 1280 / 720;
@@ -200,15 +204,15 @@ Quad2D::Quad2D(Renderer& renderer, uint32_t instCount, bool randomMass, bool ran
 
 	D3D11_SUBRESOURCE_DATA buffData{};
 	buffData.pSysMem = quad;
-	renderer.mDevice->CreateBuffer(&buffer, &buffData, &vertBuffer);
+	renderer->mDevice->CreateBuffer(&buffer, &buffData, &vertBuffer);
 
 	D3D11_BUFFER_DESC instBufferDesc{ .ByteWidth = (UINT)indices.size() * sizeof(uint32_t), .Usage = D3D11_USAGE_IMMUTABLE, .BindFlags = D3D11_BIND_VERTEX_BUFFER };
 	D3D11_SUBRESOURCE_DATA instBufferData{ .pSysMem = indices.data() };
-	renderer.mDevice->CreateBuffer(&instBufferDesc, &instBufferData, &instanceIndexBuffer);
+	renderer->mDevice->CreateBuffer(&instBufferDesc, &instBufferData, &instanceIndexBuffer);
 
 	D3D11_BUFFER_DESC instDataDesc{ .ByteWidth = (UINT)instanceData.size() * sizeof(InstanceData), .Usage = D3D11_USAGE_DYNAMIC, .BindFlags = D3D11_BIND_VERTEX_BUFFER, .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE };
 	D3D11_SUBRESOURCE_DATA instDatSR{ .pSysMem = instanceData.data() };
-	renderer.mDevice->CreateBuffer(&instDataDesc, &instDatSR, &instanceDataBuffer);
+	renderer->mDevice->CreateBuffer(&instDataDesc, &instDatSR, &instanceDataBuffer);
 }
 
 Quad2D::~Quad2D()

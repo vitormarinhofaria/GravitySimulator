@@ -114,16 +114,15 @@ void SetComputeShaderUnitsCount(int count)
 	m_ComputeUnitCount = count;
 }
 
-void PrepareComputeShader(Renderer& renderer, Quad2D& quad)
+void PrepareComputeShader(Quad2D& quad)
 {
-	auto computeShaderCSO = Utils::ReadFile("cso/ComputeShader.cso");
-	renderer.mDevice->CreateComputeShader(computeShaderCSO.data(), computeShaderCSO.size(), nullptr, &ComputeShader);
+	auto renderer = Renderer::Get();
 
-	CreateStructuredBuffer(renderer.mDevice, sizeof(InstanceData), quad.instanceData.size(), quad.instanceData.data(), &ComputeInputBuffer);
-	CreateStructuredBuffer(renderer.mDevice, sizeof(InstanceData), quad.instanceData.size(), nullptr, &ComputeOutputBuffer);
+	CreateStructuredBuffer(renderer->mDevice, sizeof(InstanceData), quad.instanceData.size(), quad.instanceData.data(), &ComputeInputBuffer);
+	CreateStructuredBuffer(renderer->mDevice, sizeof(InstanceData), quad.instanceData.size(), nullptr, &ComputeOutputBuffer);
 
-	CreateBufferSRV(renderer.mDevice, ComputeInputBuffer, &ComputeInputSRV);
-	CreateBufferUAV(renderer.mDevice, ComputeOutputBuffer, &ComputeView);
+	CreateBufferSRV(renderer->mDevice, ComputeInputBuffer, &ComputeInputSRV);
+	CreateBufferUAV(renderer->mDevice, ComputeOutputBuffer, &ComputeView);
 
 	D3D11_BUFFER_DESC desc{};
 	desc.ByteWidth = sizeof(AlignedInt);
@@ -131,7 +130,7 @@ void PrepareComputeShader(Renderer& renderer, Quad2D& quad)
 	desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	desc.StructureByteStride = 0;
-	renderer.mDevice->CreateBuffer(&desc, nullptr, &ComputeConstBuffer);
+	renderer->mDevice->CreateBuffer(&desc, nullptr, &ComputeConstBuffer);
 }
 
 
@@ -169,49 +168,62 @@ void RunComputeShader(ID3D11DeviceContext* pd3dImmediateContext,
 	pd3dImmediateContext->CSSetConstantBuffers(0, 1, ppCBnullptr);
 }
 
-void DispatchComputeShader(Renderer& r, Quad2D& quad, AlignedInt data) {
-
+void DispatchComputeShader(Quad2D& quad, AlignedInt data)
+{
+	auto r = Renderer::Get();
 	D3D11_MAPPED_SUBRESOURCE dat{};
-	r.mDContext->Map(ComputeConstBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &dat);
+	r->mDContext->Map(ComputeConstBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &dat);
 	AlignedInt* mappedData = (AlignedInt*)dat.pData;
 	*mappedData = data;
-	r.mDContext->Unmap(ComputeConstBuffer, 0);
+	r->mDContext->Unmap(ComputeConstBuffer, 0);
 
-	r.mDContext->CSSetConstantBuffers(0, 1, &ComputeConstBuffer);
-	
-	RunComputeShader(r.mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, m_ComputeUnitCount, 1, 1);
+	r->mDContext->CSSetConstantBuffers(0, 1, &ComputeConstBuffer);
+
+	RunComputeShader(r->mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, m_ComputeUnitCount, 1, 1);
+	//RunComputeShader(r.mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, ceil(quad.instanceData.size() / 128), 1, 1);
 }
-void ComputeShaderEndFrame(Renderer& r, Quad2D& quad) {
-	ID3D11Buffer* outputBuf = CreateAndCopyToDebugBuf(r.mDevice, r.mDContext, ComputeOutputBuffer);
+void ComputeShaderEndFrame(Quad2D& quad)
+{
+	auto r = Renderer::Get();
+	ID3D11Buffer* outputBuf = CreateAndCopyToDebugBuf(r->mDevice, r->mDContext, ComputeOutputBuffer);
 	D3D11_MAPPED_SUBRESOURCE MappedResource;
 	InstanceData* p;
-	r.mDContext->Map(outputBuf, 0, D3D11_MAP_READ, 0, &MappedResource);
+	r->mDContext->Map(outputBuf, 0, D3D11_MAP_READ, 0, &MappedResource);
 
 	// Set a break point here and put down the expression "p, 1024" in your watch window to see what has been written out by our CS
 	// This is also a common trick to debug CS programs.
 	p = (InstanceData*)MappedResource.pData;
 	std::memcpy(quad.instanceData.data(), p, quad.instanceData.size() * sizeof(InstanceData));
-	r.mDContext->Unmap(outputBuf, 0);
+	r->mDContext->Unmap(outputBuf, 0);
 	outputBuf->Release();
 }
 
-void FreeComputeShader() {
-	ComputeShader->Release();
+void FreeComputeShader()
+{
+	//ComputeShader->Release();
 	ComputeView->Release();
 	ComputeInputSRV->Release();
 	ComputeOutputBuffer->Release();
 }
 
-void UpdateShaderInput(Renderer& r, Quad2D& quad)
+void UpdateShaderInput(Quad2D& quad)
 {
+	auto r = Renderer::Get();
 	//ComputeInputBuffer->Release();
 	//ComputeInputSRV->Release();
 	D3D11_MAPPED_SUBRESOURCE sr{};
-	r.mDContext->Map(ComputeInputBuffer, 0, D3D11_MAP_WRITE, 0, &sr);
+	r->mDContext->Map(ComputeInputBuffer, 0, D3D11_MAP_WRITE, 0, &sr);
 
 	std::memcpy(sr.pData, quad.instanceData.data(), quad.instanceData.size() * sizeof(InstanceData));
-	r.mDContext->Unmap(ComputeInputBuffer, 0);
+	r->mDContext->Unmap(ComputeInputBuffer, 0);
 
 	//CreateStructuredBuffer(r.mDevice, sizeof(InstanceData), quad.instanceData.size(), quad.instanceData.data(), &ComputeInputBuffer);
 	//CreateBufferSRV(r.mDevice, ComputeInputBuffer, &ComputeInputSRV);
+}
+
+void SetComputeShader(void* shader) {
+	if (ComputeShader) {
+		ComputeShader->Release();
+	}
+	ComputeShader = (ID3D11ComputeShader*)shader;
 }
