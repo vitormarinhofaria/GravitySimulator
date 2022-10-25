@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Defines.h"
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -10,9 +12,11 @@
 #include <thread>
 #include <mutex>
 #include <future>
+#include <memory>
 
 #include <Windows.h>
 #include <d3d11.h>
+#include <d3dcompiler.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
