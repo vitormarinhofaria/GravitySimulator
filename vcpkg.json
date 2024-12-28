@@ -1,0 +1,7 @@
+{
+    "dependencies": [
+        { "name": "imgui", "features": [ "sdl2-binding", "dx11-binding", "docking-experimental" ] },
+        "sdl2",
+        "directxtk"
+    ]
+}

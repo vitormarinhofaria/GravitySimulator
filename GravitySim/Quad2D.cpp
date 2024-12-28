@@ -128,8 +128,8 @@ Quad2D::Quad2D(uint32_t instCount, bool randomMass, bool randomDirection, float 
 		if (randomMass) {
 			float randomChance = Utils::RandomRange(0.0f, 100.0f);
 
-			if (randomChance > 90.0f) {
-				float massFactor = Utils::RandomRange(50.0f, 150.0f);
+			if (randomChance > 99.0f) {
+				float massFactor = Utils::RandomRange(100.0f, 300.0f);
 				//ins.mass = Utils::RandomRange(100000.0f , 10000000.0f);
 				ins.mass = BASE_MASS * massFactor;
 			}

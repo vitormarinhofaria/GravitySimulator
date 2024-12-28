@@ -179,7 +179,7 @@ void DispatchComputeShader(Quad2D& quad, AlignedInt data)
 
 	r->mDContext->CSSetConstantBuffers(0, 1, &ComputeConstBuffer);
 
-	RunComputeShader(r->mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, m_ComputeUnitCount, 1, 1);
+	RunComputeShader(r->mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, 32, 1, 1);
 	//RunComputeShader(r.mDContext, ComputeShader, 1, &ComputeInputSRV, nullptr, nullptr, 0, ComputeView, ceil(quad.instanceData.size() / 128), 1, 1);
 }
 void ComputeShaderEndFrame(Quad2D& quad)

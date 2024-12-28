@@ -250,7 +250,7 @@ int main(int argc, char** argv)
 					renderer->ResizeFramebuffer(vMax.x, vMax.y);
 				}
 
-				ImGui::Image(renderer->mFramebufferTexResource, vMax);
+				ImGui::Image((unsigned long long)renderer->mFramebufferTexResource, vMax);
 				hoveringViewport = ImGui::IsItemHovered();
 				ImGui::End();
 			}
